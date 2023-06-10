@@ -29,11 +29,40 @@ async function run() {
 
     const classesCollection = client.db("focusAcademyDB").collection("classes");
     const reviewsCollection = client.db("focusAcademyDB").collection("reviews");
+    const usersCollection = client.db("focusAcademyDB").collection("users");
 
     // load all class data
     app.get("/classes", async (req, res) => {
       const result = await classesCollection.find().toArray();
       res.send(result);
+    });
+
+    // Load All Users
+
+    app.get("/users", async (req, res) => {
+      const users = await usersCollection.find().toArray();
+      res.send(users);
+    });
+
+    // load all instructor
+    app.get("/instructors", async (req, res) => {
+      const query = { user_role: "instructor" };
+      const instructors = await usersCollection.find(query).toArray();
+      res.send(instructors);
+    });
+
+    // Load all students
+    app.get("/students", async (req, res) => {
+      const query = { user_role: "student" };
+      const students = await usersCollection.find(query).toArray();
+      res.send(students);
+    });
+
+    // load all admin
+    app.get("/admins", async (req, res) => {
+      const query = { user_role: "admin" };
+      const admins = await usersCollection.find(query).toArray();
+      res.send(admins);
     });
 
     // Load All Reviews
