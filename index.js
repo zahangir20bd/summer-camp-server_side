@@ -81,6 +81,27 @@ async function run() {
       res.send(selectClasses);
     });
 
+    app.get("/selectclasses", async (req, res) => {
+      const email = req.query.email;
+      if (!email) {
+        const result = await selectClassesCollection.find().toArray();
+        res.send(result);
+      } else {
+        const query = { user_email: email };
+        const result = await selectClassesCollection.find(query).toArray();
+        res.send(result);
+      }
+    });
+
+    // get my select class by email
+    // app.get("/selectclasses/:email", async (req, res) => {
+    //   const email = req.params.email;
+    //   //   console.log(email);
+    //   const query = { user_email: email };
+    //   const result = await selectClassesCollection.find(query).toArray();
+    //   res.send(result);
+    // });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
