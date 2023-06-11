@@ -30,6 +30,9 @@ async function run() {
     const classesCollection = client.db("focusAcademyDB").collection("classes");
     const reviewsCollection = client.db("focusAcademyDB").collection("reviews");
     const usersCollection = client.db("focusAcademyDB").collection("users");
+    const selectClassesCollection = client
+      .db("focusAcademyDB")
+      .collection("selectClasses");
 
     // load all class data
     app.get("/classes", async (req, res) => {
@@ -70,6 +73,14 @@ async function run() {
       const reviews = await reviewsCollection.find().toArray();
       res.send(reviews);
     });
+
+    // add a select class  to the database
+    app.post("/selectclasses", async (req, res) => {
+      const item = req.body;
+      const selectClasses = await selectClassesCollection.insertOne(item);
+      res.send(selectClasses);
+    });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
