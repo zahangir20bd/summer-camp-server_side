@@ -43,13 +43,13 @@ async function run() {
     // Post operation for add a new user
     app.post("/users", async (req, res) => {
       const user = req.body;
-      console.log("User", user);
       const query = { user_email: user.user_email };
       const existingUser = await usersCollection.findOne(query);
-      console.log("Existing User", existingUser);
+
       if (existingUser) {
         return res.send({ message: "User already exist" });
       }
+
       const result = await usersCollection.insertOne(user);
       res.send(result);
     });
@@ -58,6 +58,54 @@ async function run() {
     app.get("/users", async (req, res) => {
       const users = await usersCollection.find().toArray();
       res.send(users);
+    });
+
+    // Load All Users
+    app.delete("/users/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+
+      const result = await usersCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    // Update an User as Admin
+    app.patch("/users/admin/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          user_role: "Admin",
+        },
+      };
+      const result = await usersCollection.updateOne(query, updateDoc);
+      res.send(result);
+    });
+
+    // Update an User Instructor
+    app.patch("/users/instructor/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          user_role: "Instructor",
+        },
+      };
+      const result = await usersCollection.updateOne(query, updateDoc);
+      res.send(result);
+    });
+
+    // Update an User Student
+    app.patch("/users/student/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          user_role: "Student",
+        },
+      };
+      const result = await usersCollection.updateOne(query, updateDoc);
+      res.send(result);
     });
 
     // load all instructor
