@@ -40,6 +40,39 @@ async function run() {
       res.send(result);
     });
 
+    // Post Method for add class on Database
+    app.post("/classes", async (req, res) => {
+      const item = req.body;
+      const result = await classesCollection.insertOne(item);
+      res.send(result);
+    });
+
+    // Update a class Status Approved
+    app.patch("/classes/approved/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          status: "Approved",
+        },
+      };
+      const result = await classesCollection.updateOne(query, updateDoc);
+      res.send(result);
+    });
+
+    // Update a class Status Deny
+    app.patch("/classes/deny/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          status: "Deny",
+        },
+      };
+      const result = await classesCollection.updateOne(query, updateDoc);
+      res.send(result);
+    });
+
     // Post operation for add a new user
     app.post("/users", async (req, res) => {
       const user = req.body;
@@ -110,21 +143,21 @@ async function run() {
 
     // load all instructor
     app.get("/instructors", async (req, res) => {
-      const query = { user_role: "instructor" };
+      const query = { user_role: "Instructor" };
       const instructors = await usersCollection.find(query).toArray();
       res.send(instructors);
     });
 
     // Load all students
     app.get("/students", async (req, res) => {
-      const query = { user_role: "student" };
+      const query = { user_role: "Student" };
       const students = await usersCollection.find(query).toArray();
       res.send(students);
     });
 
     // load all admin
     app.get("/admins", async (req, res) => {
-      const query = { user_role: "admin" };
+      const query = { user_role: "Admin" };
       const admins = await usersCollection.find(query).toArray();
       res.send(admins);
     });
