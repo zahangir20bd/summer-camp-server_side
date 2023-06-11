@@ -40,8 +40,14 @@ async function run() {
       res.send(result);
     });
 
-    // Load All Users
+    // Post operation for add a new user
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      const result = await usersCollection.insertOne(user);
+      res.send(result);
+    });
 
+    // Load All Users
     app.get("/users", async (req, res) => {
       const users = await usersCollection.find().toArray();
       res.send(users);
@@ -81,6 +87,7 @@ async function run() {
       res.send(selectClasses);
     });
 
+    // Get select classes by using query or without query
     app.get("/selectclasses", async (req, res) => {
       const email = req.query.email;
       if (!email) {
