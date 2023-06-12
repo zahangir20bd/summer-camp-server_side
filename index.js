@@ -97,9 +97,17 @@ async function run() {
     });
 
     // Post Method for add class on Database
-    app.post("/classes", verifyJWT, async (req, res) => {
-      const item = req.body;
-      const result = await classesCollection.insertOne(item);
+    app.post("/classes", verifyJWT, verifyInstructor, async (req, res) => {
+      const newClass = req.body;
+      const result = await classesCollection.insertOne(newClass);
+      res.send(result);
+    });
+
+    // get all class by email of an Instructor
+    app.get("/myclasses", verifyJWT, verifyInstructor, async (req, res) => {
+      const email = req.query.email;
+      const query = { instructor_email: email };
+      const result = await classesCollection.find(query).toArray();
       res.send(result);
     });
 
