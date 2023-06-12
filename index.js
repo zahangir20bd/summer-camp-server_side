@@ -64,6 +64,32 @@ async function run() {
       res.send({ token });
     });
 
+    // Middleware for Verify Admin
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { user_email: email };
+      const user = await usersCollection.findOne(query);
+      if (user.user_role !== "Admin") {
+        return res
+          .status(403)
+          .send({ error: true, message: "forbidden access" });
+      }
+      next();
+    };
+
+    // Middleware for Verify Admin
+    const verifyInstructor = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { user_email: email };
+      const user = await usersCollection.findOne(query);
+      if (user.user_role !== "Instructor") {
+        return res
+          .status(403)
+          .send({ error: true, message: "forbidden access" });
+      }
+      next();
+    };
+
     // load all class data
     app.get("/classes", async (req, res) => {
       const result = await classesCollection.find().toArray();
@@ -118,7 +144,7 @@ async function run() {
     });
 
     // Load All Users
-    app.get("/users", async (req, res) => {
+    app.get("/users", verifyJWT, verifyAdmin, async (req, res) => {
       const users = await usersCollection.find().toArray();
       res.send(users);
     });
