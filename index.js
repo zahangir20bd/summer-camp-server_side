@@ -1,6 +1,7 @@
 const express = require("express");
 const app = express();
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 
@@ -10,6 +11,27 @@ const port = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
+
+const verifyJWT = (req, res, next) => {
+  const authorization = req.headers.authorization;
+  if (!authorization) {
+    return res
+      .status(401)
+      .send({ error: true, message: "unauthorized access" });
+  }
+
+  const token = authorization.split(" ")[1];
+
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (error, decoded) => {
+    if (error) {
+      return res
+        .status(401)
+        .send({ error: true, message: "unauthorized access" });
+    }
+    req.decoded = decoded;
+    next();
+  });
+};
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.8grpiox.mongodb.net/?retryWrites=true&w=majority`;
 
@@ -34,6 +56,14 @@ async function run() {
       .db("focusAcademyDB")
       .collection("selectClasses");
 
+    app.post("/jwt", (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "1h",
+      });
+      res.send({ token });
+    });
+
     // load all class data
     app.get("/classes", async (req, res) => {
       const result = await classesCollection.find().toArray();
@@ -41,14 +71,14 @@ async function run() {
     });
 
     // Post Method for add class on Database
-    app.post("/classes", async (req, res) => {
+    app.post("/classes", verifyJWT, async (req, res) => {
       const item = req.body;
       const result = await classesCollection.insertOne(item);
       res.send(result);
     });
 
     // Update a class Status Approved
-    app.patch("/classes/approved/:id", async (req, res) => {
+    app.patch("/classes/approved/:id", verifyJWT, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const updateDoc = {
@@ -61,7 +91,7 @@ async function run() {
     });
 
     // Update a class Status Deny
-    app.patch("/classes/deny/:id", async (req, res) => {
+    app.patch("/classes/deny/:id", verifyJWT, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const updateDoc = {
@@ -94,7 +124,7 @@ async function run() {
     });
 
     // Load All Users
-    app.delete("/users/:id", async (req, res) => {
+    app.delete("/users/:id", verifyJWT, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
 
@@ -103,7 +133,7 @@ async function run() {
     });
 
     // Update an User as Admin
-    app.patch("/users/admin/:id", async (req, res) => {
+    app.patch("/users/admin/:id", verifyJWT, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const updateDoc = {
@@ -116,7 +146,7 @@ async function run() {
     });
 
     // Update an User Instructor
-    app.patch("/users/instructor/:id", async (req, res) => {
+    app.patch("/users/instructor/:id", verifyJWT, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const updateDoc = {
@@ -129,7 +159,7 @@ async function run() {
     });
 
     // Update an User Student
-    app.patch("/users/student/:id", async (req, res) => {
+    app.patch("/users/student/:id", verifyJWT, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const updateDoc = {
@@ -156,7 +186,7 @@ async function run() {
     });
 
     // load all admin
-    app.get("/admins", async (req, res) => {
+    app.get("/admins", verifyJWT, async (req, res) => {
       const query = { user_role: "Admin" };
       const admins = await usersCollection.find(query).toArray();
       res.send(admins);
@@ -176,20 +206,26 @@ async function run() {
     });
 
     // Get select classes by using query or without query
-    app.get("/selectclasses", async (req, res) => {
+    app.get("/selectclasses", verifyJWT, async (req, res) => {
       const email = req.query.email;
       if (!email) {
-        const result = await selectClassesCollection.find().toArray();
-        res.send(result);
-      } else {
-        const query = { user_email: email };
-        const result = await selectClassesCollection.find(query).toArray();
-        res.send(result);
+        res.send([]);
       }
+
+      const decodedEmail = req.decoded.email;
+
+      if (email !== decodedEmail) {
+        return res
+          .status(403)
+          .send({ error: true, message: "forbidden access" });
+      }
+      const query = { user_email: email };
+      const result = await selectClassesCollection.find(query).toArray();
+      res.send(result);
     });
 
     // Delete Selected Class from Database
-    app.delete("/selectclasses/:id", async (req, res) => {
+    app.delete("/selectclasses/:id", verifyJWT, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await selectClassesCollection.deleteOne(query);
