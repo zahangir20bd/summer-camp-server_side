@@ -123,6 +123,34 @@ async function run() {
       res.send(users);
     });
 
+    // Check isAdmin
+    app.get("/users/admin/:email", verifyJWT, async (req, res) => {
+      const email = req.params.email;
+
+      if (req.decoded.email !== email) {
+        res.send({ admin: false });
+      }
+
+      const query = { user_email: email };
+      const user = await usersCollection.findOne(query);
+      const result = { admin: user?.user_role === "Admin" };
+      res.send(result);
+    });
+
+    // Check isInstructor
+    app.get("/users/instructor/:email", verifyJWT, async (req, res) => {
+      const email = req.params.email;
+
+      if (req.decoded.email !== email) {
+        res.send({ instructor: false });
+      }
+
+      const query = { user_email: email };
+      const user = await usersCollection.findOne(query);
+      const result = { instructor: user?.user_role === "Instructor" };
+      res.send(result);
+    });
+
     // Load All Users
     app.delete("/users/:id", verifyJWT, async (req, res) => {
       const id = req.params.id;
