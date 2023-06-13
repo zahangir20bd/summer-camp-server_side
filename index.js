@@ -61,6 +61,10 @@ async function run() {
       .db("focusAcademyDB")
       .collection("payments");
 
+    const enrolledCollection = client
+      .db("focusAcademyDB")
+      .collection("enrolled");
+
     // Collections end
 
     // API for JWT Token
@@ -370,6 +374,20 @@ async function run() {
 
       res.send({ insertResult, deleteResult });
     });
+
+    app.get("/admin-status", verifyJWT, verifyAdmin, async (req, res) => {
+      const totalUser = await usersCollection.estimatedDocumentCount();
+      const totalClasses = await classesCollection.estimatedDocumentCount();
+      const totalOrder = await paymentCollection.estimatedDocumentCount();
+      const getPayments = await paymentCollection.find().toArray();
+      const revenue = getPayments.reduce(
+        (sum, payment) => sum + payment.pay_amount,
+        0
+      );
+
+      res.send({ revenue, totalUser, totalClasses, totalOrder });
+    });
+    // Enrolled Classes APi
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
