@@ -1,11 +1,11 @@
 const express = require("express");
-const app = express();
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const stripe = require("stripe")(process.env.PAYMENT_SECRET_KEY);
 
+const app = express();
 const port = process.env.PORT || 5000;
 
 // Middleware
@@ -162,7 +162,7 @@ async function run() {
       res.send(result);
     });
 
-    // Update a class Status Deny
+    // Api for Feedback
     app.patch(
       "/classes/feedback/:id",
       verifyJWT,
