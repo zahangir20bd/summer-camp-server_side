@@ -4,6 +4,7 @@ const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
+const stripe = require("stripe")(process.env.PAYMENT_SECRET_KEY);
 
 const port = process.env.PORT || 5000;
 
@@ -49,13 +50,20 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
 
+    // Collections Start
     const classesCollection = client.db("focusAcademyDB").collection("classes");
     const reviewsCollection = client.db("focusAcademyDB").collection("reviews");
     const usersCollection = client.db("focusAcademyDB").collection("users");
     const selectClassesCollection = client
       .db("focusAcademyDB")
       .collection("selectClasses");
+    const paymentCollection = client
+      .db("focusAcademyDB")
+      .collection("payments");
 
+    // Collections end
+
+    // API for JWT Token
     app.post("/jwt", (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
@@ -83,6 +91,19 @@ async function run() {
       const query = { user_email: email };
       const user = await usersCollection.findOne(query);
       if (user.user_role !== "Instructor") {
+        return res
+          .status(403)
+          .send({ error: true, message: "forbidden access" });
+      }
+      next();
+    };
+
+    // Middleware for Verify Admin
+    const verifyStudent = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { user_email: email };
+      const user = await usersCollection.findOne(query);
+      if (user.user_role !== "Student") {
         return res
           .status(403)
           .send({ error: true, message: "forbidden access" });
@@ -137,6 +158,25 @@ async function run() {
       res.send(result);
     });
 
+    // Update a class Status Deny
+    app.patch(
+      "/classes/feedback/:id",
+      verifyJWT,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const feedback = req.body;
+        const updateDoc = {
+          $set: {
+            feedback,
+          },
+        };
+        const result = await classesCollection.updateOne(query, updateDoc);
+        res.send(result);
+      }
+    );
+
     // Post operation for add a new user
     app.post("/users", async (req, res) => {
       const user = req.body;
@@ -155,6 +195,11 @@ async function run() {
     app.get("/users", verifyJWT, verifyAdmin, async (req, res) => {
       const users = await usersCollection.find().toArray();
       res.send(users);
+    });
+
+    app.get("/profiles", async (req, res) => {
+      const result = await usersCollection.find().toArray();
+      res.send(result);
     });
 
     // Check isAdmin
@@ -287,11 +332,43 @@ async function run() {
     });
 
     // Delete Selected Class from Database
-    app.delete("/selectclasses/:id", verifyJWT, async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const result = await selectClassesCollection.deleteOne(query);
-      res.send(result);
+    app.delete(
+      "/selectclasses/:id",
+      verifyJWT,
+      verifyStudent,
+      async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await selectClassesCollection.deleteOne(query);
+        res.send(result);
+      }
+    );
+
+    // create Payment intent
+    app.post("/create-payment-intent", verifyJWT, async (req, res) => {
+      const { price } = req.body;
+      const amount = parseInt(price * 100);
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
+
+    // Payment Related API
+    app.post("/payments", verifyJWT, async (req, res) => {
+      const payment = req.body;
+      const insertResult = await paymentCollection.insertOne(payment);
+
+      const query = {
+        _id: { $in: payment.payment_classes.map((id) => new ObjectId(id)) },
+      };
+      const deleteResult = await selectClassesCollection.deleteMany(query);
+
+      res.send({ insertResult, deleteResult });
     });
 
     // Send a ping to confirm a successful connection
